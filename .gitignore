@@ -1,0 +1,8 @@
+DerivedData/
+.DS_Store
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+**/xcuserdata/
+MeetGrid/GoogleService-Info.plist
+MeetGrid/GoogleService-Info*.local.plist
