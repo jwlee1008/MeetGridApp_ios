@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ResultsView: View {
     @Environment(AppState.self) private var appState
+    @State private var selectedDateKey = ScheduleCatalog.todayKey
 
     var body: some View {
         NavigationStack {
@@ -9,122 +10,101 @@ struct ResultsView: View {
                 if let group = appState.selectedGroup {
                     let overlaps = ScheduleCalculator.overlaps(for: group)
                     let overlapMap = Dictionary(uniqueKeysWithValues: overlaps.map { ($0.slot, $0) })
-                    let recommendations = ScheduleCalculator.recommendations(for: group)
+                    let bestOverlapByDate = ScheduleCalculator.bestOverlapByDate(for: group)
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            SectionHeader(
-                                title: "겹치는 시간",
-                                subtitle: "숫자가 클수록 더 많은 친구가 가능한 시간이에요."
-                            )
+                        VStack(alignment: .leading, spacing: 14) {
+                            resultLegend
 
-                            resultSummary(group: group, recommendations: recommendations)
+                            CalendarDayGrid(
+                                selectedDateKey: selectedDateKey,
+                                selectedCounts: [:],
+                                bestOverlapByDate: bestOverlapByDate,
+                                totalMembers: group.totalMembers
+                            ) { day in
+                                selectedDateKey = day.dateKey
+                            }
 
-                            WeeklyAvailabilityGrid(
-                                selectedSlots: [],
-                                mode: .overlap,
-                                overlapBySlot: overlapMap
-                            ) { _ in }
-
-                            recommendationList(recommendations)
+                            selectedDayResult(group: group, overlapMap: overlapMap)
                         }
                         .padding(20)
                     }
-                    .background(Color(.systemGroupedBackground))
+                    .scrollContentBackground(.hidden)
+                    .background(Color.meetGridBackground)
                 } else {
                     EmptyStateView(
-                        title: "결과가 없어요",
-                        message: "그룹을 만든 뒤 친구들의 가능한 시간을 모아 보세요.",
+                        title: "NO DATA",
+                        message: "시간 먼저 찍기.",
                         systemImage: "chart.bar.xaxis"
                     )
                 }
             }
-            .navigationTitle("추천 시간")
+            .navigationTitle("결과")
+            .toolbarBackground(Color.meetGridBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 
-    private func resultSummary(group: FriendGroup, recommendations: [SlotOverlap]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
-                Image(systemName: "person.2.wave.2")
-                    .font(.title2)
-                    .foregroundStyle(.teal)
+    private var resultLegend: some View {
+        HStack(spacing: 8) {
+            StatusPill(text: "가능", systemImage: "circle.fill", tint: .meetGridNeonBlue)
+            StatusPill(text: "일부", systemImage: "circle.lefthalf.filled", tint: .meetGridNeonPink)
+            StatusPill(text: "불가", systemImage: "circle", tint: .meetGridNeonRed)
+        }
+    }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(group.totalMembers)명 기준")
-                        .font(.headline)
-                    Text(group.confirmedSlot?.displayText ?? "아직 확정된 시간이 없어요.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+    private func selectedDayResult(group: FriendGroup, overlapMap: [TimeSlot: SlotOverlap]) -> some View {
+        let daySlots = ScheduleCatalog.slots(on: selectedDateKey)
+            .compactMap { overlapMap[$0] }
+            .filter { $0.count > 0 }
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(ScheduleCatalog.day(for: selectedDateKey)?.titleText ?? selectedDateKey)
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
 
                 Spacer()
+
+                Text("\(group.totalMembers)명")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.meetGridMuted)
             }
 
-            HStack(spacing: 8) {
-                StatusPill(text: "전원", systemImage: "circle.fill", tint: .teal)
-                StatusPill(text: "대부분", systemImage: "circle.lefthalf.filled", tint: .green)
-                StatusPill(text: "일부", systemImage: "circle", tint: .orange)
-            }
-
-            if let best = recommendations.first {
-                Button {
-                    Task {
-                        await appState.confirm(best)
-                    }
-                } label: {
-                    Label("최고 추천 시간 확정", systemImage: "checkmark.circle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private func recommendationList(_ recommendations: [SlotOverlap]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "추천 순위")
-
-            if recommendations.isEmpty {
-                Text("아직 겹치는 시간이 없어요. 시간 탭에서 가능한 시간을 더 표시해 보세요.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            if daySlots.isEmpty {
+                Text("가능한 사람 없음")
+                    .font(.headline)
+                    .foregroundStyle(.white)
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.meetGridNeonRed.opacity(0.82), in: RoundedRectangle(cornerRadius: 8))
             } else {
-                ForEach(Array(recommendations.enumerated()), id: \.element.id) { index, overlap in
+                ForEach(daySlots) { overlap in
                     HStack(spacing: 12) {
-                        Text("\(index + 1)")
+                        Text(overlap.slot.rangeText)
                             .font(.headline.monospacedDigit())
                             .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(Color.overlapColor(ratio: overlap.ratio), in: Circle())
+                            .frame(width: 98, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(overlap.slot.displayText)
-                                .font(.headline)
                             Text(overlap.availableMembers.map(\.name).joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.white)
                                 .lineLimit(2)
+
+                            Text(overlap.summary)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.meetGridMuted)
                         }
 
                         Spacer()
-
-                        Text(overlap.summary)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
                     }
                     .padding(14)
-                    .background(.background, in: RoundedRectangle(cornerRadius: 8))
-                    .onTapGesture {
-                        Task {
-                            await appState.confirm(overlap)
-                        }
-                    }
+                    .background(
+                        Color.resultDayColor(count: overlap.count, total: group.totalMembers).opacity(0.86),
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
                 }
             }
         }

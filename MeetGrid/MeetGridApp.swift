@@ -1,4 +1,5 @@
 import SwiftUI
+import GoogleSignIn
 
 @main
 struct MeetGridApp: App {
@@ -12,6 +13,9 @@ struct MeetGridApp: App {
         WindowGroup {
             AppView()
                 .environment(appState)
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
+                }
         }
     }
 }

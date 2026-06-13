@@ -1,5 +1,8 @@
 import Foundation
+import FirebaseCore
+import GoogleSignIn
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -12,6 +15,7 @@ final class AppState {
     var statusMessage: String?
     var isBusy = false
     var currentUserID: String?
+    var currentUserEmail: String?
 
     @ObservationIgnored private var firebaseRepository: FirebaseGroupRepository?
 
@@ -29,9 +33,13 @@ final class AppState {
             return "로컬 데모"
         }
         if currentUserID == nil {
-            return "Firebase 준비 중"
+            return "Google 로그인 필요"
         }
         return "Firebase 연결됨"
+    }
+
+    var requiresGoogleLogin: Bool {
+        isFirebaseConfigured && currentUserID == nil
     }
 
     func select(_ group: FriendGroup) {
@@ -45,13 +53,60 @@ final class AppState {
         }
 
         await runBusy {
-            let uid = try await ensureSignedIn()
-            let fetchedGroups = try await repository().fetchGroups(forMemberID: uid)
-            groups = fetchedGroups
-            selectedGroupID = fetchedGroups.first?.id
-            statusMessage = fetchedGroups.isEmpty
-                ? "Firebase 연결 완료. 그룹을 만들거나 초대코드를 입력해 주세요."
-                : "Firebase에서 내 그룹 \(fetchedGroups.count)개를 불러왔어요."
+            if let user = try repository().currentUser() {
+                applySignedInUser(user)
+                try await loadGroupsForCurrentUser()
+            } else {
+                groups = []
+                selectedGroupID = nil
+                statusMessage = "Firebase 연결 완료. Google로 로그인해 주세요."
+            }
+        }
+    }
+
+    func signInWithGoogle(presenting viewController: UIViewController) async {
+        guard isFirebaseConfigured else {
+            statusMessage = "Firebase 설정 파일이 없어서 Google 로그인을 사용할 수 없어요."
+            return
+        }
+
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            statusMessage = "GoogleService-Info.plist에 CLIENT_ID가 없어요. Firebase에서 Google 로그인을 켠 뒤 설정 파일을 다시 받아 주세요."
+            return
+        }
+
+        await runBusy {
+            let configuration = GIDConfiguration(clientID: clientID)
+            GIDSignIn.sharedInstance.configuration = configuration
+
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: viewController)
+            guard let idToken = result.user.idToken?.tokenString else {
+                throw FirebaseRepositoryError.missingUser
+            }
+
+            let user = try await repository().signInWithGoogle(
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
+            applySignedInUser(user)
+            try await loadGroupsForCurrentUser()
+        }
+    }
+
+    func signOut() {
+        guard isFirebaseConfigured else { return }
+
+        do {
+            try repository().signOut()
+            GIDSignIn.sharedInstance.signOut()
+            currentUserID = nil
+            currentUserEmail = nil
+            currentMember = SampleData.currentMember
+            groups = []
+            selectedGroupID = nil
+            statusMessage = "로그아웃했어요. 다시 Google로 로그인할 수 있어요."
+        } catch {
+            statusMessage = "로그아웃 오류: \(error.localizedDescription)"
         }
     }
 
@@ -61,7 +116,7 @@ final class AppState {
 
         if isFirebaseConfigured {
             await runBusy {
-                _ = try await ensureSignedIn()
+                guard requireSignedIn() != nil else { return }
                 let group = makeGroup(named: groupName, inviteCode: Self.makeInviteCode(), members: [currentMember])
                 try await repository().save(group)
                 upsert(group)
@@ -97,7 +152,7 @@ final class AppState {
 
         if isFirebaseConfigured {
             await runBusy {
-                _ = try await ensureSignedIn()
+                guard requireSignedIn() != nil else { return }
                 guard var group = try await repository().fetch(inviteCode: code) else {
                     statusMessage = "해당 초대코드의 그룹을 찾지 못했어요."
                     return
@@ -170,15 +225,36 @@ final class AppState {
         )
     }
 
-    private func ensureSignedIn() async throws -> String {
-        if let currentUserID {
-            return currentUserID
-        }
+    private func loadGroupsForCurrentUser() async throws {
+        guard let currentUserID else { return }
+        let fetchedGroups = try await repository().fetchGroups(forMemberID: currentUserID)
+        groups = fetchedGroups
+        selectedGroupID = fetchedGroups.first?.id
+        statusMessage = fetchedGroups.isEmpty
+            ? "Google 로그인 완료. 그룹을 만들거나 초대코드를 입력해 주세요."
+            : "Firebase에서 내 그룹 \(fetchedGroups.count)개를 불러왔어요."
+    }
 
-        let uid = try await repository().signInAnonymouslyIfNeeded()
-        currentUserID = uid
-        currentMember = Member(id: uid, name: "나", color: .teal)
-        return uid
+    private func applySignedInUser(_ user: AuthenticatedUser) {
+        let displayName = user.displayName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let memberName = displayName?.isEmpty == false ? displayName! : "나"
+
+        currentUserID = user.uid
+        currentUserEmail = user.email
+        currentMember = Member(
+            id: user.uid,
+            name: memberName,
+            color: .teal
+        )
+    }
+
+    private func requireSignedIn() -> String? {
+        guard let currentUserID else {
+            statusMessage = "먼저 Google로 로그인해 주세요."
+            return nil
+        }
+        return currentUserID
     }
 
     private func repository() throws -> FirebaseGroupRepository {

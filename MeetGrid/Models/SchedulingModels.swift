@@ -1,56 +1,51 @@
 import Foundation
 import SwiftUI
 
-enum Weekday: Int, CaseIterable, Codable, Identifiable {
-    case monday = 1
-    case tuesday
-    case wednesday
-    case thursday
-    case friday
-    case saturday
-    case sunday
+struct CalendarDay: Hashable, Identifiable {
+    let dateKey: String
+    let date: Date
+    let isToday: Bool
 
-    var id: Int { rawValue }
+    var id: String { dateKey }
 
-    var title: String {
-        switch self {
-        case .monday: "월요일"
-        case .tuesday: "화요일"
-        case .wednesday: "수요일"
-        case .thursday: "목요일"
-        case .friday: "금요일"
-        case .saturday: "토요일"
-        case .sunday: "일요일"
-        }
+    var dayNumberText: String {
+        "\(Calendar.current.component(.day, from: date))"
     }
 
-    var shortTitle: String {
-        switch self {
-        case .monday: "월"
-        case .tuesday: "화"
-        case .wednesday: "수"
-        case .thursday: "목"
-        case .friday: "금"
-        case .saturday: "토"
-        case .sunday: "일"
-        }
+    var monthDayText: String {
+        "\(Calendar.current.component(.month, from: date))/\(Calendar.current.component(.day, from: date))"
+    }
+
+    var weekdayText: String {
+        ScheduleCatalog.weekdayShortText(for: date)
+    }
+
+    var titleText: String {
+        "\(monthDayText) \(weekdayText)"
     }
 }
 
 struct TimeSlot: Hashable, Codable, Identifiable {
-    let weekday: Weekday
+    let dateKey: String
     let startHour: Int
 
     var id: String {
-        "\(weekday.rawValue)-\(startHour)"
+        "\(dateKey)-\(startHour)"
     }
 
     var rangeText: String {
         "\(startHour):00-\(startHour + 1):00"
     }
 
+    var dayText: String {
+        guard let date = ScheduleCatalog.date(from: dateKey) else {
+            return dateKey
+        }
+        return "\(Calendar.current.component(.month, from: date))/\(Calendar.current.component(.day, from: date)) \(ScheduleCatalog.weekdayShortText(for: date))"
+    }
+
     var displayText: String {
-        "\(weekday.shortTitle) \(rangeText)"
+        "\(dayText) \(rangeText)"
     }
 }
 
@@ -126,15 +121,84 @@ struct SlotOverlap: Identifiable, Hashable {
 enum ScheduleCatalog {
     static let startHour = 9
     static let endHour = 23
+    static let dayCount = 30
+
+    private static let calendar = Calendar.current
+
+    private static let keyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     static var hours: [Int] {
         Array(startHour..<endHour)
     }
 
-    static var allSlots: [TimeSlot] {
-        Weekday.allCases.flatMap { weekday in
-            hours.map { TimeSlot(weekday: weekday, startHour: $0) }
+    static var todayKey: String {
+        dateKey(for: Date())
+    }
+
+    static var days: [CalendarDay] {
+        let today = calendar.startOfDay(for: Date())
+        return (0..<dayCount).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: today) else {
+                return nil
+            }
+            return CalendarDay(dateKey: dateKey(for: date), date: date, isToday: offset == 0)
         }
+    }
+
+    static var leadingBlankCount: Int {
+        guard let firstDay = days.first else { return 0 }
+        let weekday = calendar.component(.weekday, from: firstDay.date)
+        return weekday - 1
+    }
+
+    static var allSlots: [TimeSlot] {
+        days.flatMap { day in
+            hours.map { TimeSlot(dateKey: day.dateKey, startHour: $0) }
+        }
+    }
+
+    static func slots(on dateKey: String) -> [TimeSlot] {
+        hours.map { TimeSlot(dateKey: dateKey, startHour: $0) }
+    }
+
+    static func day(for dateKey: String) -> CalendarDay? {
+        days.first { $0.dateKey == dateKey }
+    }
+
+    static func dateKey(for date: Date) -> String {
+        keyFormatter.string(from: date)
+    }
+
+    static func date(from dateKey: String) -> Date? {
+        keyFormatter.date(from: dateKey)
+    }
+
+    static func weekdayShortText(for date: Date) -> String {
+        switch calendar.component(.weekday, from: date) {
+        case 1: "일"
+        case 2: "월"
+        case 3: "화"
+        case 4: "수"
+        case 5: "목"
+        case 6: "금"
+        default: "토"
+        }
+    }
+
+    static func dateKeyForLegacyWeekday(_ legacyWeekday: Int) -> String? {
+        guard (1...7).contains(legacyWeekday) else { return nil }
+        return days.first { day in
+            let weekday = calendar.component(.weekday, from: day.date)
+            let mondayBasedWeekday = weekday == 1 ? 7 : weekday - 1
+            return mondayBasedWeekday == legacyWeekday
+        }?.dateKey
     }
 }
 
@@ -157,11 +221,29 @@ enum ScheduleCalculator {
             .filter { $0.count > 0 }
             .sorted {
                 if $0.count == $1.count {
-                    return $0.slot.startHour < $1.slot.startHour
+                    if $0.slot.dateKey == $1.slot.dateKey {
+                        return $0.slot.startHour < $1.slot.startHour
+                    }
+                    return $0.slot.dateKey < $1.slot.dateKey
                 }
                 return $0.count > $1.count
             }
             .prefix(limit)
             .map { $0 }
+    }
+
+    static func bestOverlapByDate(for group: FriendGroup) -> [String: SlotOverlap] {
+        Dictionary(grouping: overlaps(for: group), by: { $0.slot.dateKey })
+            .compactMapValues { overlaps in
+                overlaps
+                    .filter { $0.count > 0 }
+                    .sorted {
+                        if $0.count == $1.count {
+                            return $0.slot.startHour < $1.slot.startHour
+                        }
+                        return $0.count > $1.count
+                    }
+                    .first
+            }
     }
 }

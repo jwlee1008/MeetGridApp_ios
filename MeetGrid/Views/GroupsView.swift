@@ -3,14 +3,14 @@ import UIKit
 
 struct GroupsView: View {
     @Environment(AppState.self) private var appState
+    @State private var showsSettings = false
 
     var body: some View {
         @Bindable var appState = appState
 
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    header
+                VStack(alignment: .leading, spacing: 18) {
                     createAndJoinSection(appState: appState)
 
                     if let selectedGroup = appState.selectedGroup {
@@ -18,58 +18,49 @@ struct GroupsView: View {
                         groupSwitcher(selectedGroup: selectedGroup)
                     } else {
                         EmptyStateView(
-                            title: "그룹이 없어요",
-                            message: "친구 그룹을 만들거나 초대코드로 참가해 보세요.",
+                            title: "NO CREW",
+                            message: "그룹 만들거나 코드 넣기.",
                             systemImage: "person.3.sequence"
                         )
                     }
                 }
                 .padding(20)
             }
-            .background(Color(.systemGroupedBackground))
+            .scrollContentBackground(.hidden)
+            .background(Color.meetGridBackground)
             .navigationTitle("MeetGrid")
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("가능한 시간을 모아서 약속을 빠르게 정해요.")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primary)
-
-            HStack(spacing: 8) {
-                StatusPill(
-                    text: appState.connectionTitle,
-                    systemImage: appState.isFirebaseConfigured ? "checkmark.icloud" : "iphone",
-                    tint: appState.isFirebaseConfigured ? .teal : .orange
-                )
-
-                if appState.isBusy {
-                    ProgressView()
-                        .controlSize(.small)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showsSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(Color.meetGridNeonBlue)
+                    }
+                    .accessibilityLabel("설정")
                 }
-
-                if let statusMessage = appState.statusMessage {
-                    Text(statusMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
+            }
+            .toolbarBackground(Color.meetGridBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(isPresented: $showsSettings) {
+                SettingsView()
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
 
     private func createAndJoinSection(appState: AppState) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(
-                title: "시작하기",
-                subtitle: "그룹을 만들거나 친구가 준 초대코드로 들어갈 수 있어요."
-            )
+            Text("NEW CREW")
+                .font(.caption.weight(.black))
+                .foregroundStyle(Color.meetGridNeonBlue)
 
             VStack(spacing: 10) {
                 HStack(spacing: 10) {
-                    TextField("그룹 이름", text: Bindable(appState).newGroupName)
-                        .textFieldStyle(.roundedBorder)
+                    TextField("", text: Bindable(appState).newGroupName, prompt: Text("그룹 이름").foregroundStyle(Color.meetGridMuted))
+                        .meetGridField()
                         .submitLabel(.done)
 
                     Button {
@@ -82,15 +73,16 @@ struct GroupsView: View {
                             .frame(width: 38, height: 38)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(appState.isBusy)
+                    .tint(.meetGridNeonBlue)
+                    .disabled(appState.isBusy || appState.requiresGoogleLogin)
                     .accessibilityLabel("그룹 만들기")
                 }
 
                 HStack(spacing: 10) {
-                    TextField("초대코드", text: Bindable(appState).inviteCodeInput)
+                    TextField("", text: Bindable(appState).inviteCodeInput, prompt: Text("초대코드").foregroundStyle(Color.meetGridMuted))
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
+                        .meetGridField()
                         .submitLabel(.join)
                         .onSubmit {
                             Task {
@@ -108,26 +100,40 @@ struct GroupsView: View {
                             .frame(width: 38, height: 38)
                     }
                     .buttonStyle(.bordered)
-                    .disabled(appState.isBusy)
+                    .tint(.meetGridNeonPink)
+                    .disabled(appState.isBusy || appState.requiresGoogleLogin)
                     .accessibilityLabel("초대코드로 참가")
                 }
             }
         }
         .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.meetGridSurface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.meetGridNeonPurple.opacity(0.55), lineWidth: 1)
+        }
     }
 
     private func selectedGroupSection(_ group: FriendGroup) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: group.name, subtitle: "\(group.totalMembers)명이 참여 중")
+            HStack(alignment: .firstTextBaseline) {
+                Text(group.name)
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(group.totalMembers)명")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.meetGridAcid)
+            }
 
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("초대코드")
+                    Text("CODE")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.meetGridMuted)
                     Text(group.inviteCode)
                         .font(.title3.monospaced().weight(.bold))
+                        .foregroundStyle(.white)
                 }
                 Spacer()
                 Button {
@@ -139,41 +145,8 @@ struct GroupsView: View {
                         .frame(width: 38, height: 38)
                 }
                 .buttonStyle(.bordered)
+                .tint(.meetGridNeonBlue)
                 .accessibilityLabel("초대코드 복사")
-            }
-
-            if let confirmedSlot = group.confirmedSlot {
-                HStack(spacing: 10) {
-                    StatusPill(text: "확정", systemImage: "checkmark.circle", tint: .teal)
-                    Text(confirmedSlot.displayText)
-                        .font(.headline)
-                    Spacer()
-                    Button("취소") {
-                        Task {
-                            await appState.clearConfirmedSlot()
-                        }
-                    }
-                    .font(.caption.weight(.semibold))
-                }
-                .padding(12)
-                .background(Color.teal.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
-            }
-
-            let recommendations = ScheduleCalculator.recommendations(for: group, limit: 1)
-            if let best = recommendations.first {
-                HStack(spacing: 12) {
-                    Image(systemName: "sparkle.magnifyingglass")
-                        .font(.title2)
-                        .foregroundStyle(.teal)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("가장 많이 겹치는 시간")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(best.slot.displayText) · \(best.summary)")
-                            .font(.headline)
-                    }
-                    Spacer()
-                }
             }
 
             FlowLayout(spacing: 8) {
@@ -183,12 +156,18 @@ struct GroupsView: View {
             }
         }
         .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.meetGridSurface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.meetGridNeonPink.opacity(0.45), lineWidth: 1)
+        }
     }
 
     private func groupSwitcher(selectedGroup: FriendGroup) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "내 그룹", subtitle: "작업할 그룹을 바꿀 수 있어요.")
+            Text("CREWS")
+                .font(.caption.weight(.black))
+                .foregroundStyle(Color.meetGridNeonPink)
 
             ForEach(appState.groups) { group in
                 Button {
@@ -198,22 +177,157 @@ struct GroupsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(group.name)
                                 .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
                             Text(group.inviteCode)
                                 .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.meetGridMuted)
                         }
                         Spacer()
                         if group.id == selectedGroup.id {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.teal)
+                                .foregroundStyle(Color.meetGridNeonBlue)
                         }
                     }
                     .padding(12)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.meetGridSurface2, in: RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
             }
         }
+    }
+}
+
+struct SettingsView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("설정")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.bordered)
+                .tint(.meetGridMuted)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                StatusPill(
+                    text: appState.connectionTitle,
+                    systemImage: appState.isFirebaseConfigured ? "checkmark.icloud" : "iphone",
+                    tint: appState.isFirebaseConfigured ? .meetGridNeonBlue : .meetGridNeonRed
+                )
+
+                if appState.currentUserID == nil, appState.isFirebaseConfigured {
+                    Button {
+                        guard let viewController = UIApplication.shared.meetGridTopViewController else {
+                            appState.statusMessage = "Google 로그인 화면을 열 수 없어요."
+                            return
+                        }
+                        Task {
+                            await appState.signInWithGoogle(presenting: viewController)
+                        }
+                    } label: {
+                        Label("Google 로그인", systemImage: "person.crop.circle.badge.checkmark")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.meetGridNeonPink)
+                    .disabled(appState.isBusy)
+                } else if appState.currentUserID != nil {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(appState.currentMember.name)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(appState.currentUserEmail ?? "Google 로그인됨")
+                            .font(.caption)
+                            .foregroundStyle(Color.meetGridMuted)
+                            .lineLimit(1)
+                    }
+
+                    Button {
+                        appState.signOut()
+                    } label: {
+                        Label("로그아웃", systemImage: "rectangle.portrait.and.arrow.right")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.meetGridNeonRed)
+                    .disabled(appState.isBusy)
+                }
+
+                if appState.isBusy {
+                    ProgressView()
+                        .tint(.meetGridNeonBlue)
+                }
+
+                if let statusMessage = appState.statusMessage {
+                    Text(statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(Color.meetGridMuted)
+                        .lineLimit(3)
+                }
+            }
+            .padding(16)
+            .background(Color.meetGridSurface, in: RoundedRectangle(cornerRadius: 8))
+
+            Spacer()
+        }
+        .padding(20)
+        .background(Color.meetGridBackground.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+    }
+}
+
+extension View {
+    func meetGridField() -> some View {
+        self
+            .padding(.horizontal, 12)
+            .frame(height: 44)
+            .foregroundStyle(.white)
+            .tint(.meetGridNeonBlue)
+            .background(Color.meetGridSurface2, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+            }
+    }
+}
+
+extension UIApplication {
+    var meetGridTopViewController: UIViewController? {
+        connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .rootViewController?
+            .meetGridTopViewController
+    }
+}
+
+extension UIViewController {
+    var meetGridTopViewController: UIViewController {
+        if let presentedViewController {
+            return presentedViewController.meetGridTopViewController
+        }
+
+        if let navigationController = self as? UINavigationController,
+           let visibleViewController = navigationController.visibleViewController {
+            return visibleViewController.meetGridTopViewController
+        }
+
+        if let tabBarController = self as? UITabBarController,
+           let selectedViewController = tabBarController.selectedViewController {
+            return selectedViewController.meetGridTopViewController
+        }
+
+        return self
     }
 }
 

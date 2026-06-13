@@ -5,12 +5,50 @@ import FirebaseFirestore
 struct FirebaseGroupRepository {
     private let database = Firestore.firestore()
 
+    func currentUser() -> AuthenticatedUser? {
+        guard let user = Auth.auth().currentUser else { return nil }
+        return AuthenticatedUser(
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email
+        )
+    }
+
     func signInAnonymouslyIfNeeded() async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             signInAnonymouslyIfNeeded { result in
                 continuation.resume(with: result)
             }
         }
+    }
+
+    func signInWithGoogle(idToken: String, accessToken: String) async throws -> AuthenticatedUser {
+        let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
+        return try await withCheckedThrowingContinuation { continuation in
+            Auth.auth().signIn(with: credential) { result, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                guard let user = result?.user else {
+                    continuation.resume(throwing: FirebaseRepositoryError.missingUser)
+                    return
+                }
+
+                continuation.resume(
+                    returning: AuthenticatedUser(
+                        uid: user.uid,
+                        displayName: user.displayName,
+                        email: user.email
+                    )
+                )
+            }
+        }
+    }
+
+    func signOut() throws {
+        try Auth.auth().signOut()
     }
 
     func save(_ group: FriendGroup) async throws {
@@ -103,6 +141,12 @@ enum FirebaseRepositoryError: Error {
     case notConfigured
 }
 
+struct AuthenticatedUser {
+    let uid: String
+    let displayName: String?
+    let email: String?
+}
+
 private extension FriendGroup {
     var firestoreData: [String: Any] {
         var data: [String: Any] = [
@@ -119,7 +163,7 @@ private extension FriendGroup {
             "availability": availability.mapValues { slots in
                 slots.map { slot in
                     [
-                        "weekday": slot.weekday.rawValue,
+                        "dateKey": slot.dateKey,
                         "startHour": slot.startHour
                     ]
                 }
@@ -176,17 +220,21 @@ private extension Member {
 private extension TimeSlot {
     var firestoreData: [String: Any] {
         [
-            "weekday": weekday.rawValue,
+            "dateKey": dateKey,
             "startHour": startHour
         ]
     }
 
     init?(data: [String: Any]) {
-        guard let weekdayValue = data["weekday"] as? Int,
-              let weekday = Weekday(rawValue: weekdayValue),
-              let startHour = data["startHour"] as? Int
-        else { return nil }
+        guard let startHour = data["startHour"] as? Int else { return nil }
 
-        self.init(weekday: weekday, startHour: startHour)
+        if let dateKey = data["dateKey"] as? String {
+            self.init(dateKey: dateKey, startHour: startHour)
+        } else if let weekdayValue = data["weekday"] as? Int,
+                  let dateKey = ScheduleCatalog.dateKeyForLegacyWeekday(weekdayValue) {
+            self.init(dateKey: dateKey, startHour: startHour)
+        } else {
+            return nil
+        }
     }
 }

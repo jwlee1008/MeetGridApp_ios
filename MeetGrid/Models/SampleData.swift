@@ -10,27 +10,27 @@ enum SampleData {
 
         var availability: [String: Set<TimeSlot>] = [:]
         availability[currentMember.id] = [
-            TimeSlot(weekday: .friday, startHour: 18),
-            TimeSlot(weekday: .friday, startHour: 19),
-            TimeSlot(weekday: .saturday, startHour: 14),
-            TimeSlot(weekday: .saturday, startHour: 15)
+            Self.slot(dayOffset: 2, hour: 18),
+            Self.slot(dayOffset: 2, hour: 19),
+            Self.slot(dayOffset: 3, hour: 14),
+            Self.slot(dayOffset: 3, hour: 15)
         ]
         availability[mina.id] = [
-            TimeSlot(weekday: .friday, startHour: 18),
-            TimeSlot(weekday: .friday, startHour: 19),
-            TimeSlot(weekday: .saturday, startHour: 15),
-            TimeSlot(weekday: .sunday, startHour: 13)
+            Self.slot(dayOffset: 2, hour: 18),
+            Self.slot(dayOffset: 2, hour: 19),
+            Self.slot(dayOffset: 3, hour: 15),
+            Self.slot(dayOffset: 4, hour: 13)
         ]
         availability[jun.id] = [
-            TimeSlot(weekday: .friday, startHour: 19),
-            TimeSlot(weekday: .saturday, startHour: 14),
-            TimeSlot(weekday: .saturday, startHour: 15),
-            TimeSlot(weekday: .sunday, startHour: 13)
+            Self.slot(dayOffset: 2, hour: 19),
+            Self.slot(dayOffset: 3, hour: 14),
+            Self.slot(dayOffset: 3, hour: 15),
+            Self.slot(dayOffset: 4, hour: 13)
         ]
         availability[seo.id] = [
-            TimeSlot(weekday: .friday, startHour: 18),
-            TimeSlot(weekday: .saturday, startHour: 15),
-            TimeSlot(weekday: .saturday, startHour: 16)
+            Self.slot(dayOffset: 2, hour: 18),
+            Self.slot(dayOffset: 3, hour: 15),
+            Self.slot(dayOffset: 3, hour: 16)
         ]
 
         return FriendGroup(
@@ -41,5 +41,10 @@ enum SampleData {
             availability: availability,
             confirmedSlot: nil
         )
+    }
+
+    private static func slot(dayOffset: Int, hour: Int) -> TimeSlot {
+        let day = ScheduleCatalog.days[min(dayOffset, ScheduleCatalog.days.count - 1)]
+        return TimeSlot(dateKey: day.dateKey, startHour: hour)
     }
 }
