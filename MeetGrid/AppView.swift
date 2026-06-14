@@ -87,7 +87,7 @@ struct LoginGateView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.meetGridNeonBlue)
-            .disabled(appState.isBusy)
+            .disabled(!appState.canStartGoogleLogin)
 
             if appState.isBusy {
                 ProgressView()
@@ -99,7 +99,7 @@ struct LoginGateView: View {
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.meetGridMuted)
-                    .lineLimit(3)
+                    .lineLimit(4)
             }
 
             Spacer()

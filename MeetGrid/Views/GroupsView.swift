@@ -239,7 +239,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.meetGridNeonPink)
-                    .disabled(appState.isBusy)
+                    .disabled(!appState.canStartGoogleLogin)
                 } else if appState.currentUserID != nil {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(appState.currentMember.name)

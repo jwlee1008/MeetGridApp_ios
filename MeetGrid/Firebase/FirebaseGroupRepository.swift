@@ -14,14 +14,6 @@ struct FirebaseGroupRepository {
         )
     }
 
-    func signInAnonymouslyIfNeeded() async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            signInAnonymouslyIfNeeded { result in
-                continuation.resume(with: result)
-            }
-        }
-    }
-
     func signInWithGoogle(idToken: String, accessToken: String) async throws -> AuthenticatedUser {
         let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
         return try await withCheckedThrowingContinuation { continuation in
@@ -82,27 +74,6 @@ struct FirebaseGroupRepository {
                     } ?? []
                     continuation.resume(returning: groups.sorted { $0.name < $1.name })
                 }
-        }
-    }
-
-    private func signInAnonymouslyIfNeeded(completion: @escaping (Result<String, Error>) -> Void) {
-        if let user = Auth.auth().currentUser {
-            completion(.success(user.uid))
-            return
-        }
-
-        Auth.auth().signInAnonymously { result, error in
-            if let error {
-                completion(.failure(error))
-                return
-            }
-
-            guard let uid = result?.user.uid else {
-                completion(.failure(FirebaseRepositoryError.missingUser))
-                return
-            }
-
-            completion(.success(uid))
         }
     }
 

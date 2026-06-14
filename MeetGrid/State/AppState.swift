@@ -32,6 +32,9 @@ final class AppState {
         if !isFirebaseConfigured {
             return "로컬 데모"
         }
+        if googleSignInConfigurationError != nil {
+            return "Google 설정 필요"
+        }
         if currentUserID == nil {
             return "Google 로그인 필요"
         }
@@ -40,6 +43,28 @@ final class AppState {
 
     var requiresGoogleLogin: Bool {
         isFirebaseConfigured && currentUserID == nil
+    }
+
+    var canStartGoogleLogin: Bool {
+        isFirebaseConfigured && googleSignInConfigurationError == nil && !isBusy
+    }
+
+    var googleSignInConfigurationError: String? {
+        guard isFirebaseConfigured else { return nil }
+
+        guard hasGoogleServiceValue(for: "CLIENT_ID") else {
+            return "GoogleService-Info.plist에 CLIENT_ID가 없어요. Firebase Authentication에서 Google 로그인을 켠 뒤 iOS 설정 파일을 다시 받아 주세요."
+        }
+
+        guard let reversedClientID = googleServiceValue(for: "REVERSED_CLIENT_ID") else {
+            return "GoogleService-Info.plist에 REVERSED_CLIENT_ID가 없어요. Firebase에서 iOS 설정 파일을 다시 받아 주세요."
+        }
+
+        guard registeredURLSchemes.contains(reversedClientID) else {
+            return "Google 로그인 URL Scheme이 앱에 등록되지 않았어요. Xcode에서 다시 빌드해 주세요."
+        }
+
+        return nil
     }
 
     func select(_ group: FriendGroup) {
@@ -53,6 +78,13 @@ final class AppState {
         }
 
         await runBusy {
+            if let googleSignInConfigurationError {
+                groups = []
+                selectedGroupID = nil
+                statusMessage = googleSignInConfigurationError
+                return
+            }
+
             if let user = try repository().currentUser() {
                 applySignedInUser(user)
                 try await loadGroupsForCurrentUser()
@@ -70,8 +102,13 @@ final class AppState {
             return
         }
 
-        guard let clientID = FirebaseApp.app()?.options.clientID else {
-            statusMessage = "GoogleService-Info.plist에 CLIENT_ID가 없어요. Firebase에서 Google 로그인을 켠 뒤 설정 파일을 다시 받아 주세요."
+        if let googleSignInConfigurationError {
+            statusMessage = googleSignInConfigurationError
+            return
+        }
+
+        guard let clientID = FirebaseApp.app()?.options.clientID, !clientID.isEmpty else {
+            statusMessage = "Google 로그인 설정을 읽지 못했어요. GoogleService-Info.plist를 다시 확인해 주세요."
             return
         }
 
@@ -306,5 +343,33 @@ final class AppState {
         let letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         let token = String((0..<4).compactMap { _ in letters.randomElement() })
         return "MGT-\(token)"
+    }
+
+    private func hasGoogleServiceValue(for key: String) -> Bool {
+        googleServiceValue(for: key) != nil
+    }
+
+    private func googleServiceValue(for key: String) -> String? {
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let values = NSDictionary(contentsOfFile: path),
+              let value = values[key] as? String
+        else {
+            return nil
+        }
+
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue
+    }
+
+    private var registeredURLSchemes: Set<String> {
+        guard let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] else {
+            return []
+        }
+
+        return Set(
+            urlTypes.flatMap { urlType in
+                urlType["CFBundleURLSchemes"] as? [String] ?? []
+            }
+        )
     }
 }
