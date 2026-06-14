@@ -17,9 +17,22 @@
 		C0DE00000000000000000005 /* MeetGrid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeetGrid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C0DE00000000000000000024 /* Exceptions for "MeetGrid" folder in "MeetGrid" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C0DE00000000000000000004 /* MeetGrid */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C0DE00000000000000000006 /* MeetGrid */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C0DE00000000000000000024 /* Exceptions for "MeetGrid" folder in "MeetGrid" target */,
+			);
 			path = MeetGrid;
 			sourceTree = "<group>";
 		};
@@ -153,6 +166,7 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/MeetGrid/GoogleService-Info.plist",
+				"$(SRCROOT)/MeetGrid/Info.plist",
 				"$(SRCROOT)/scripts/configure-google-url-scheme.sh",
 			);
 			name = "Configure Google Sign-In URL Scheme";
@@ -185,7 +199,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8BX8Z6RCJL;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MeetGrid/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MeetGrid;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -217,7 +232,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8BX8Z6RCJL;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MeetGrid/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MeetGrid;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
