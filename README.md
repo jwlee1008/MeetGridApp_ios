@@ -150,7 +150,7 @@ Firebase 설정 파일이 없으면 로컬 샘플 데이터로 실행됩니다.
 
 ## 발표 영상
 
-YouTube 영상 링크: 업로드 후 여기에 추가
+YouTube 영상 링크: https://youtube.com/shorts/-5Kp7M3qCUU
 
 영상은 3분 이내로 아래 흐름에 맞춰 구성할 예정입니다.
 
