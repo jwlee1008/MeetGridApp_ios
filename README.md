@@ -1,106 +1,63 @@
 # MeetGrid
 
-친구끼리 약속 시간을 정할 때 각자 가능한 시간을 입력하고, 가장 많이 겹치는 시간대를 자동으로 찾아주는 iOS 앱입니다.
+친구끼리 약속 시간을 정할 때 각자 가능한 시간을 입력하고, 가장 많이 겹치는 시간대를 추천해 주는 Flutter 앱입니다.
 
-> 기말 미니프로젝트: iOS + SwiftUI + Firebase 기반 약속 시간 조율 앱
+> 약속 그룹 생성, 초대코드 참여, 30일 시간표 선택, 추천 시간 확정까지 한 흐름으로 구현했습니다.
 
 ## 프로젝트 개요
 
-### 개발 배경
+친구들과 약속을 잡을 때 단체 채팅방에서 가능한 날짜와 시간을 계속 물어봐야 하는 불편함이 있습니다. MeetGrid는 이 과정을 앱 안의 그룹, 초대코드, 시간표, 추천 결과 흐름으로 단순화합니다.
 
-친구들과 약속을 잡을 때 단체 채팅방에서 "언제 돼?", "나는 금요일 저녁 가능", "토요일은 몇 시?" 같은 메시지가 반복됩니다. 사람이 직접 가능한 시간을 모아 비교하면 시간이 오래 걸리고, 중간에 누락되기 쉽습니다.
-
-MeetGrid는 이 과정을 앱 안의 30일 캘린더로 단순화합니다. 그룹을 만들고 초대코드를 공유하면, 각자가 가능한 날짜와 시간을 체크하고 앱이 겹치는 시간대를 숫자와 색상으로 보여줍니다.
-
-### 해결하고자 한 문제
-
-- 단체 채팅에서 가능한 시간을 수동으로 모아야 하는 번거로움
-- 여러 사람의 가능 시간을 한눈에 비교하기 어려운 문제
-- 약속 후보 시간이 많아질수록 의사결정이 느려지는 문제
-
-### 핵심 목표
-
-- 초대코드 기반 친구 그룹 생성 및 참가
-- 오늘부터 30일 캘린더에서 가능한 날짜/시간 선택
-- 모든 멤버의 가능 시간 겹침 계산
-- 가장 적합한 약속 시간 추천 및 확정
-- Firebase를 이용한 사용자 인증과 데이터 저장
+사용자는 그룹을 만들고 초대코드를 공유합니다. 친구들은 같은 그룹에 들어와 가능한 시간을 체크하고, 앱은 시간대별 가능한 인원 수를 계산해 가장 적합한 약속 시간을 보여줍니다.
 
 ## 주요 기능
 
 | 기능 | 설명 |
 | --- | --- |
-| 그룹 생성 | 약속 그룹을 만들고 초대코드를 자동 발급합니다. |
-| 초대코드 참가 | 친구가 공유한 초대코드로 같은 그룹에 참여합니다. |
-| 가능 시간 입력 | 오늘부터 30일 안에서 날짜를 고르고 시간대별 가능한 시간을 선택합니다. |
-| 겹침 결과 확인 | 날짜별 최고 겹침과 시간대별 가능한 인원 수를 히트맵 형태로 확인합니다. |
-| 추천 시간 확정 | 가장 많이 겹치는 시간을 추천하고 약속 시간으로 확정합니다. |
-| Firebase 연동 | Google 로그인, 그룹 데이터, 시간 선택 정보를 Firestore에 저장합니다. |
-
-## 앱 화면
-
-### 1. 그룹 생성 및 초대코드
-
-![그룹 화면](docs/screenshots/01-groups.jpg)
-
-그룹 이름을 입력해 약속 그룹을 만들고, 발급된 초대코드를 친구에게 공유할 수 있습니다.
-
-### 2. 가능한 시간 선택
-
-![가능 시간 입력 화면](docs/screenshots/02-availability.jpg)
-
-사용자는 오늘부터 30일 캘린더에서 날짜를 고르고 가능한 시간을 체크합니다. 선택된 날짜와 시간은 색상과 체크 아이콘으로 표시됩니다.
-
-### 3. 겹치는 시간 추천
-
-![추천 결과 화면](docs/screenshots/03-results.jpg)
-
-날짜별 최고 겹침을 먼저 보여주고, 선택한 날짜의 시간대별 가능한 인원 수를 숫자와 색상으로 확인해 가장 많이 겹치는 시간을 확정할 수 있습니다.
+| Google 로그인 | Firebase Authentication 기반으로 사용자를 구분합니다. |
+| 그룹 생성 | 약속 그룹을 만들고 초대코드를 발급합니다. |
+| 초대코드 참여 | 친구가 공유한 코드로 같은 그룹에 들어갑니다. |
+| 가능 시간 선택 | 오늘부터 30일 안에서 날짜와 시간대를 선택합니다. |
+| 추천 결과 | 많이 겹치는 시간대를 인원 수와 진행 바로 보여줍니다. |
+| 시간 확정 | 추천 시간 중 하나를 약속 시간으로 확정합니다. |
+| 로컬 데모 | Firebase 설정이 없거나 Android 설정이 아직 없을 때 샘플 데이터로 실행됩니다. |
 
 ## 사용 흐름
 
 1. 앱 실행 후 Google 계정으로 로그인합니다.
-2. 사용자가 약속 그룹을 생성합니다.
-3. 앱이 초대코드를 발급합니다.
-4. 친구는 초대코드로 그룹에 참가합니다.
-5. 각자 가능한 시간대를 선택합니다.
-6. 결과 탭에서 겹치는 시간을 확인합니다.
+2. 그룹 탭에서 약속 그룹을 생성합니다.
+3. 생성된 초대코드를 친구에게 공유합니다.
+4. 친구는 초대코드로 같은 그룹에 참여합니다.
+5. 시간표 탭에서 가능한 날짜와 시간을 선택합니다.
+6. 결과 탭에서 겹치는 시간대를 확인합니다.
 7. 가장 적합한 시간을 약속 시간으로 확정합니다.
 
 ## 기술 스택
 
 | 구분 | 사용 기술 |
 | --- | --- |
-| Platform | iOS |
-| Language | Swift |
-| UI | SwiftUI |
-| State | Observation, `@Observable`, `@Environment` |
+| Framework | Flutter |
+| Language | Dart |
+| State | Provider, ChangeNotifier |
 | Backend | Firebase |
-| Auth | Firebase Authentication Google Login |
+| Auth | Firebase Authentication, Google Sign-In |
 | Database | Cloud Firestore |
-| Package | Swift Package Manager |
-| IDE | Xcode |
+| iOS Bundle ID | `jwlee.MeetGrid` |
+| Android Package | `com.jwlee.meetgrid` |
 
 ## 프로젝트 구조
 
 ```text
-MeetGrid/
-├── MeetGridApp.swift
-├── AppView.swift
-├── Models/
-│   ├── SchedulingModels.swift
-│   └── SampleData.swift
-├── State/
-│   └── AppState.swift
-├── Firebase/
-│   ├── FirebaseBootstrap.swift
-│   └── FirebaseGroupRepository.swift
-└── Views/
-    ├── GroupsView.swift
-    ├── AvailabilityView.swift
-    ├── ResultsView.swift
-    └── Components.swift
+lib/
+├── main.dart
+├── ui.dart
+├── app_state.dart
+├── models.dart
+├── firebase_config.dart
+└── firebase_group_repository.dart
 
+android/
+ios/
 Firebase/
 └── firestore.rules
 
@@ -111,54 +68,79 @@ docs/
 
 ## 구현 포인트
 
-### 1. 가능한 시간 모델링
+### 1. 시간 슬롯 모델링
 
-날짜 키(`dateKey`)와 시작 시간을 `TimeSlot`으로 표현하고, 사용자별 선택 시간을 `Set<TimeSlot>`으로 저장했습니다. 중복 선택을 막고 빠르게 포함 여부를 계산하기 위해 `Set`을 사용했습니다.
+날짜 키와 시작 시간을 `TimeSlot`으로 표현합니다. 사용자별 선택 시간은 `Set<TimeSlot>`로 관리해 중복 선택을 막고 포함 여부를 빠르게 계산합니다.
 
-### 2. 겹침 시간 계산
+### 2. 겹침 계산
 
-오늘부터 30일의 모든 날짜/시간 슬롯을 순회하면서 각 멤버가 해당 슬롯을 선택했는지 검사합니다. 이를 통해 `4/4명 가능`, `3/4명 가능` 같은 추천 정보를 계산합니다.
+그룹 멤버들이 선택한 모든 시간 슬롯을 모은 뒤, 각 슬롯마다 가능한 멤버 수를 계산합니다. 결과는 가능한 인원 수 기준으로 정렬해 추천 시간 목록에 보여줍니다.
 
-### 3. Firebase 연동
+### 3. Firebase 저장 구조
 
-앱 시작 시 `GoogleService-Info.plist`가 있으면 Firebase를 초기화합니다. 이후 Google 로그인으로 사용자 UID를 만들고, 그룹과 가능 시간 데이터를 Firestore에 저장합니다.
+Firestore의 `groups` 컬렉션에 그룹 이름, 초대코드, 멤버 목록, 사용자별 가능 시간, 확정 시간을 저장합니다. 공개 저장소에는 민감한 로컬 Firebase 파일을 포함하지 않습니다.
 
-### 4. 로컬 데모 모드
+### 4. UI 방향
 
-Firebase 설정 파일이 없을 때도 앱을 실행해 볼 수 있도록 샘플 데이터를 포함했습니다. 공개 저장소에는 개인 Firebase 설정 파일을 포함하지 않습니다.
+전체 화면은 화이트톤을 기본으로 구성했고, 입력창, 카드, 버튼, 날짜 칩, 시간 슬롯은 둥근 모서리로 통일했습니다. 그룹, 시간표, 결과 탭을 나눠 시연 때 기능 흐름이 바로 보이도록 했습니다.
 
 ## Firebase 설정
 
-공개 저장소에는 개인 Firebase 설정 파일을 올리지 않습니다. 직접 실행하려면 다음 단계를 진행합니다.
+### 공통
 
-1. Firebase Console에서 iOS 앱을 생성합니다.
-2. Bundle ID를 `jwlee.MeetGrid`로 등록합니다.
-3. `GoogleService-Info.plist`를 다운로드합니다.
-4. Xcode에서 `MeetGrid/` 폴더에 추가하고 target membership을 체크합니다.
-5. Authentication에서 Google 로그인을 활성화합니다.
-6. `GoogleService-Info.plist`를 다시 다운로드해서 같은 위치에 교체합니다.
-7. `GoogleService-Info.plist`에 `CLIENT_ID`와 `REVERSED_CLIENT_ID`가 들어 있는지 확인합니다.
-8. Cloud Firestore를 생성합니다.
-9. [Firebase/firestore.rules](Firebase/firestore.rules) 내용을 Firestore Rules에 반영합니다.
+1. Firebase Console에서 프로젝트를 엽니다.
+2. Authentication에서 Google 로그인을 활성화합니다.
+3. Cloud Firestore를 생성합니다.
+4. [Firebase/firestore.rules](Firebase/firestore.rules) 내용을 Firestore Rules에 반영합니다.
 
-iOS 앱은 `Info.plist`에 Google 로그인 URL Scheme을 등록하고, 빌드 시 `GoogleService-Info.plist`의 `REVERSED_CLIENT_ID`와 일치하는지 검증합니다.
+### iOS
+
+iOS는 기존 Firebase 프로젝트의 설정값을 [lib/firebase_config.dart](lib/firebase_config.dart)에 반영했습니다.
+
+확인할 값:
+
+- Bundle ID: `jwlee.MeetGrid`
+- URL Scheme: `com.googleusercontent.apps.411746177907-0tptp4s8jge60q6mgrj44h6ejlhsk5if`
+- Google 로그인 URL Scheme은 [ios/Runner/Info.plist](ios/Runner/Info.plist)에 등록되어 있습니다.
+
+### Android
+
+Android에서 Firebase 원격 저장까지 사용하려면 Firebase Console에서 Android 앱을 추가해야 합니다.
+
+1. Android package name을 `com.jwlee.meetgrid`로 등록합니다.
+2. Google 로그인용 SHA 인증서를 Firebase Console에 추가합니다.
+3. Firebase Android App ID를 확인합니다.
+4. 실행할 때 아래처럼 App ID를 전달합니다.
+
+```bash
+flutter run --dart-define=FIREBASE_ANDROID_APP_ID=1:YOUR_PROJECT_NUMBER:android:YOUR_ANDROID_APP_ID
+```
+
+App ID를 전달하지 않으면 Android 앱은 로컬 데모 모드로 실행됩니다.
 
 ## 실행 방법
 
-1. Xcode에서 `MeetGrid.xcodeproj`를 엽니다.
-2. Scheme을 `MeetGrid`로 선택합니다.
-3. iPhone Simulator 또는 실제 iPhone을 선택합니다.
-4. Run 버튼을 눌러 실행합니다.
+```bash
+flutter pub get
+flutter run
+```
 
-Firebase 설정 파일이 없으면 로컬 샘플 데이터로 실행됩니다.
+분석, 테스트, 빌드 확인:
+
+```bash
+flutter analyze
+flutter test
+flutter build apk --debug
+flutter build ios --debug --no-codesign
+```
+
+실제 iPhone 배포 빌드는 Xcode에서 `ios/Runner.xcworkspace`를 열고 Signing Team을 확인한 뒤 실행합니다.
 
 ## 발표 영상
 
 YouTube 영상 링크: https://youtube.com/shorts/-5Kp7M3qCUU
 
-영상 길이: 약 1분 19초
-
-영상은 3분 이내로 앱의 목적과 핵심 사용 흐름을 소개합니다.
+영상은 앱의 목적과 핵심 사용 흐름을 소개합니다.
 
 1. 앱을 만든 이유
 2. 그룹 생성 및 초대코드
@@ -168,19 +150,19 @@ YouTube 영상 링크: https://youtube.com/shorts/-5Kp7M3qCUU
 
 자세한 촬영 흐름은 [docs/video/demo-script.md](docs/video/demo-script.md)에 정리했습니다.
 
-## 자체 평가 기준 대응
+## 평가 기준 대응
 
 | 평가 항목 | MeetGrid에서의 대응 |
 | --- | --- |
 | 효용성 | 친구 약속 시간 조율이라는 명확한 문제를 해결합니다. |
-| 완결성 | 그룹 생성, 참가, 시간 입력, 추천, 확정 흐름을 구현했습니다. |
-| 직관성 | 탭 구조와 30일 캘린더 UI로 기능 위치를 쉽게 파악할 수 있습니다. |
-| 라벨링 | 그룹, 시간, 결과 등 짧고 명확한 용어를 사용했습니다. |
-| 시각디자인 | SwiftUI 기반의 카드, 색상 히트맵, 아이콘을 사용했습니다. |
-| 학습용이성 | 선택 가능한 칸과 결과 숫자를 직접 보여줍니다. |
-| 피드백 | Firebase 연결 상태, 저장 상태, 확정 상태를 텍스트로 제공합니다. |
-| 오류 정정 | 빈 초대코드, 없는 그룹, Firebase 오류 상황을 메시지로 안내합니다. |
-| 정보성 | README와 발표 영상 흐름을 통해 앱 목적과 사용법을 설명합니다. |
+| 완결성 | 그룹 생성, 참여, 시간 입력, 추천, 확정 흐름을 구현했습니다. |
+| 직관성 | 그룹, 시간표, 결과 탭으로 사용 흐름을 분리했습니다. |
+| 라벨링 | 초대코드, 가능 시간, 추천 시간 등 이해하기 쉬운 용어를 사용했습니다. |
+| 시각디자인 | 화이트톤 배경과 둥근 카드, 칩, 버튼으로 부드러운 화면을 구성했습니다. |
+| 학습용이성 | 날짜와 시간 슬롯을 눌러 바로 선택할 수 있게 했습니다. |
+| 피드백 | 로그인, 생성, 참여, 확정, 오류 상황을 메시지로 안내합니다. |
+| 오류 정정 | 빈 입력, 없는 초대코드, Firebase 설정 실패 상황을 처리합니다. |
+| 정보성 | README와 발표 영상 링크로 앱 목적과 사용법을 설명합니다. |
 
 ## 개발자
 
